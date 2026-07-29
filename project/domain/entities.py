@@ -1,4 +1,4 @@
-class nonogram:
+class Nonogram:
     def __init__(self, rows, cols, row_hints=[], col_hints=[]):
         self.rows = rows
         self.cols = cols
