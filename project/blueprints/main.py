@@ -1,9 +1,15 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 from project.adapters.assembly import Container
 from project.domain.nonogram_service import NonogramService
 from dependency_injector.wiring import inject, Provide
 
-main = Blueprint('main', __name__)
+main = Blueprint('main', __name__, template_folder='templates')
+
+
+@main.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
+
 
 @main.route('/nonogram', methods=['POST'])
 @inject
@@ -38,5 +44,3 @@ def solve_nonogram(nonogram_service: NonogramService = Provide[Container.nonogra
 def get_nonogram(nonogram_service: NonogramService = Provide[Container.nonogram_service]):
     nonogram = nonogram_service.get_nonogram(nonogram_service)
     return jsonify(nonogram), 200
-
-
