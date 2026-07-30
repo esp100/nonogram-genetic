@@ -6,7 +6,7 @@ import sys
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
 
-    container = Container(app=app)
+    container = Container()
     app.container = container
     container.wire(modules=[sys.modules[__name__]])
 
