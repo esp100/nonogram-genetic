@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Editor</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+        .controls { margin-bottom: 20px; }
+        
+        
+        #nonogram-container {
+            display: inline-grid;
+            gap: 2px;
+            background-color: #333; 
+            border: 2px solid #333;
+        }
+        
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        
+        .cell.active {
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Base Editor</h2>
+    
+    <div class="controls">
+        <label>Size: <input type="number" id="rows" value="5" min="5" max="20"></label>
+        
+        <button onclick="generateGrid()">Update Size</button>
+    </div>
+
+    
+    <div id="nonogram-container"></div>
+
+    <div class="controls" style="margin-top: 20px;">
+        <button onclick="LoadFile()">Load File</button>
+        <button onclick="saveToFile()">Save to File</button>
+        <button onclick="solveNonogram()">Solve</button>
+    </div>
+
+    <script>
+        let gridState = []; 
+
+        function generateGrid() {
+            const rows = parseInt(document.getElementById('rows').value);
+            const cols = rows; 
+            const container = document.getElementById('nonogram-container');
+            
+
+            container.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
+            container.innerHTML = '';
+            gridState = [];
+
+            for (let i = 0; i < rows; i++) {
+                let rowState = [];
+                for (let j = 0; j < cols; j++) {
+                    rowState.push(0); // 0 = off, 1 = on
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'cell';
+                    
+                    btn.onclick = () => {
+                        gridState[i][j] = gridState[i][j] === 0 ? 1 : 0;
+                        btn.classList.toggle('active');
+                    };
+                    
+                    container.appendChild(btn);
+                }
+                gridState.push(rowState);
+            }
+        }
+
+        function changeGridState(grid){
+            const container = document.getElementById('nonogram-container');
+            const buttons = container.getElementsByClassName('cell');
+
+            for (let i = 0; i < grid.length; i++) {
+                for (let j = 0; j < grid[i].length; j++) {
+                    const index = i * grid[i].length + j;
+                    if (grid[i][j] === 1) {
+                        buttons[index].classList.add('active');
+                    } else {
+                        buttons[index].classList.remove('active');
+                    }
+                }
+            }
+        }
+
+        async function saveToFile() {            
+            try {
+                const response = await fetch('/nonogram/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ grid: gridState, filename: 'nonogram.csv' })
+                });
+                
+                if (response.ok){
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'nonogram.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } else {
+                    console.error("Error saving file:", response.statusText);
+                }
+                
+            } catch (error) {
+                console.error("Error from Flask server:", error);
+            }
+        }
+
+        function solveNonogram() {}
+        function LoadFile() {}
+        generateGrid();
+    </script>
+</body>
+</html>
