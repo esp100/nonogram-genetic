@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, render_template
+from flask import Blueprint, jsonify, request, render_template, send_file
 from project.adapters.assembly import Container
 from project.domain.nonogram_service import NonogramService
 from dependency_injector.wiring import inject, Provide
@@ -44,3 +44,27 @@ def solve_nonogram(nonogram_service: NonogramService = Provide[Container.nonogra
 def get_nonogram(nonogram_service: NonogramService = Provide[Container.nonogram_service]):
     nonogram = nonogram_service.get_nonogram(nonogram_service)
     return jsonify(nonogram), 200
+
+@main.route("/nonogram/save", methods=["POST"])
+@inject
+def save_nonogram(nonogram_service: NonogramService = Provide[Container.nonogram_service]):
+    data = request.get_json()
+
+    if not data or 'grid' not in data:
+        return jsonify({"error": "Invalid request data"}), 400
+
+    try:
+        grid = data['grid']
+        filename = data.get('filename', 'nonogram.csv')
+        
+        csv_buffer = nonogram_service.generate_file(grid)
+
+        return send_file(
+            csv_buffer,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
