@@ -1,10 +1,10 @@
 class Nonogram:
-    def __init__(self, rows, cols, row_hints=[], col_hints=[]):
-        self.rows = rows
-        self.cols = cols
+    def __init__(self, grid, row_hints=[], col_hints=[]):
+        self.rows = len(grid)
+        self.cols = len(grid[0]) if grid else 0
         self.row_hints = row_hints
         self.col_hints = col_hints
-        self.grid = [[0 for _ in range(cols)] for _ in range(rows)]
+        self.grid = grid
 
     def set_grid(self, grid):
         self.grid = grid
