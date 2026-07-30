@@ -81,6 +81,7 @@
         }
 
         function changeGridState(grid){
+            changeGridSize(gridState);
             const container = document.getElementById('nonogram-container');
             const buttons = container.getElementsByClassName('cell');
 
@@ -88,7 +89,7 @@
                 for (let j = 0; j < grid[i].length; j++) {
                     const index = i * grid[i].length + j;
                     if (grid[i][j] === 1) {
-                        buttons[index].classList.add('active');
+                        buttons[index].classList.toggle('active');
                     } else {
                         buttons[index].classList.remove('active');
                     }
@@ -123,7 +124,43 @@
         }
 
         function solveNonogram() {}
-        function LoadFile() {}
+
+        function changeGridSize(grid){
+            const rows = grid.length;
+            document.getElementById('rows').value = rows;
+            generateGrid();
+        }
+
+        function LoadFile() {
+            try{
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.csv';
+                
+                input.onchange = async (event) => {
+                    const file = event.target.files[0];
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/nonogram/load', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json(); 
+                        gridState = data.grid; 
+                        changeGridState(gridState);
+                    } else {
+                        console.error("Error loading file:", response.statusText);
+                    }
+                };
+                
+                input.click();
+            } catch (error) {
+                console.error("Error from Flask server:", error);
+            }
+        }
         generateGrid();
     </script>
 </body>

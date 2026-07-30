@@ -39,11 +39,31 @@ def solve_nonogram(nonogram_service: NonogramService = Provide[Container.nonogra
     solved_nonogram = nonogram_service.solve_nonogram(nonogram)
     return jsonify(solved_nonogram.get_nonogram()), 200
 
-@main.route("/nonogram/get", methods=["POST"])
+@main.route("/nonogram/load", methods=["POST"])
 @inject
-def get_nonogram(nonogram_service: NonogramService = Provide[Container.nonogram_service]):
-    nonogram = nonogram_service.get_nonogram(nonogram_service)
-    return jsonify(nonogram), 200
+def load_nonogram(nonogram_service: NonogramService = Provide[Container.nonogram_service]):
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        grid = nonogram_service.csv_adapter.read_stream(file.stream)
+        rows = len(grid)
+        cols = len(grid[0]) if rows > 0 else 0
+        #TODO: Implement logic to calculate hints based on the provided grid 
+        nonogram = nonogram_service.create_nonogram(rows, cols, grid=grid)
+        return jsonify({
+                "grid": nonogram.get_nonogram().get('grid'),
+                "row_hints": nonogram.get_nonogram().get('row_hints'),
+                "col_hints": nonogram.get_nonogram().get('col_hints'),
+            }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @main.route("/nonogram/save", methods=["POST"])
 @inject
