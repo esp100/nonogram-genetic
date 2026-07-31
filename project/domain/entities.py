@@ -1,7 +1,7 @@
 class Nonogram:
     def __init__(self, grid, row_hints=[], col_hints=[]):
         self.rows = len(grid)
-        self.cols = len(grid[0]) if grid else 0
+        self.cols = len(grid[0]) 
         self.row_hints = row_hints
         self.col_hints = col_hints
         self.grid = grid
