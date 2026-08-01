@@ -5,25 +5,71 @@
     <title>Editor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+        :root {
+            --neon-purple: #d609ba;
+            --neon-color: #dcdcdc;
+            --dark-bg: #0d0d0d;
+            --light-grey: #cccccc;
+            --dark-grey: #333;
+        }
+
+        body { 
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center; 
+            margin-top: 20px; 
+            background-color: var(--dark-bg);
+            color: var(--light-grey);
+        }
+
+        h2, h3, h4 {
+            color: var(--neon-color);
+            text-shadow: 0 0 1px var(--neon-color); 
+        }
+
         .controls { margin-bottom: 20px; }
+
+        button, input, select {
+            background-color: transparent;
+            border: 2px solid var(--neon-color);
+            color: var(--neon-color);
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover, select:hover, input:hover {
+            background-color: var(--neon-color);
+            color: var(--dark-bg);
+            box-shadow: 0 0 5px var(--neon-color);
+        }
+
+        input[type="number"] {
+            width: 60px;
+        }
         
         #puzzle-wrapper {
             display: inline-grid;
             gap: 2px;
-            background-color: #333; 
-            border: 2px solid #333;
+            background-color: var(--light-grey); 
+            border: 2px solid var(--light-grey);
         }
 
         #col-hints-container, #row-hints-container {
             display: flex;
-            background-color: #f0f0f0;
+            background-color: var(--dark-grey);
+            color: var(--light-grey);
         }
         #col-hints-container {
             flex-direction: row;
         }
         #row-hints-container {
             flex-direction: column;
+        }
+        .solution-hint-container {
+            display: flex;
+            background-color: var(--dark-grey);
+            color: var(--light-grey);
         }
         .cell {
             width: 30px;
@@ -35,6 +81,7 @@
 
         .cell.active {
             background-color: black;
+            box-shadow: none;
         }
 
         .hint-box {
@@ -49,10 +96,40 @@
         .col-hint-box {
             flex-direction: column;
         }
+
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--neon-color);
+            font-size: 1.5em;
+        }
+
+        .spinner {
+            border: 8px solid #555;
+            border-top: 8px solid var(--neon-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1.5s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-
     <h2>Base Editor</h2>
     
     <div class="controls">
@@ -72,6 +149,11 @@
         <button onclick="LoadFile()">Load File</button>
         <button onclick="saveToFile()">Save to File</button>
         <button onclick="solveNonogram()">Solve</button>
+    </div>
+
+    <div id="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Procesando...</p>
     </div>
 
     <div id="results-container" style="margin-top: 20px; display: none;">
@@ -162,6 +244,7 @@
         }
 
         async function saveToFile() {            
+            document.getElementById('loading-overlay').style.display = 'flex';
             try {
                 const response = await fetch('/nonogram/save', {
                     method: 'POST',
@@ -184,11 +267,14 @@
                 
             } catch (error) {
                 console.error("Error from Flask server:", error);
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
             }
         }
 
         async function solveNonogram() {
             try{
+                document.getElementById('loading-overlay').style.display = 'flex';
                 const response = await fetch('nonogram/solve',{
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -222,6 +308,8 @@
                 }
             }catch (error) {
                 console.error("Error from Flask server:", error);
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
             }
         }
 
@@ -229,13 +317,15 @@
             container.innerHTML = ''; 
             const wrapper = document.createElement('div');
             wrapper.style.display = 'inline-grid';
-            wrapper.style.gap = '2px';
-            wrapper.style.backgroundColor = '#333';
-            wrapper.style.border = '2px solid #333';
+            wrapper.style.gap = '1px';
+            wrapper.style.backgroundColor = 'var(--light-grey)'; 
+            wrapper.style.border = '1px solid var(--light-grey)';
 
             const corner = document.createElement('div');
             const colHintsDiv = document.createElement('div');
             const rowHintsDiv = document.createElement('div');
+            colHintsDiv.className = 'solution-hint-container';
+            rowHintsDiv.className = 'solution-hint-container';
             const gridDiv = document.createElement('div');
 
             displayHints(rowHints, colHints, rowHintsDiv, colHintsDiv);
@@ -249,6 +339,8 @@
             corner.style.gridArea = '1 / 1 / 2 / 2';
             colHintsDiv.style.gridArea = '1 / 2 / 2 / 3';
             rowHintsDiv.style.gridArea = '2 / 1 / 3 / 2';
+            colHintsDiv.style.flexDirection = 'row';
+            rowHintsDiv.style.flexDirection = 'column';
             gridDiv.style.gridArea = '2 / 2 / 3 / 3';
 
             const rows = grid.length;
@@ -302,6 +394,9 @@
 
         function displayFitnessChart(fitnessData) {
             const ctx = document.getElementById('fitness-chart').getContext('2d');
+            const gridColor = 'rgba(220, 220, 220, 0.2)';
+            const fontColor = 'rgba(220, 220, 220, 1)';
+            const neonColor = 'rgba(220, 220, 220, 1)';
             const labels = Array.from({ length: fitnessData.length }, (_, i) => i + 1);
 
             if (fitnessChart) {
@@ -315,20 +410,23 @@
                     datasets: [{
                         label: 'Best Fitness @ Each Generation',
                         data: fitnessData,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: neonColor,
+                        backgroundColor: gridColor,
                         fill: true,
                         tension: 0.1
                     }]
                 },
                 options: {
+                    plugins: { legend: { labels: { color: fontColor } } },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: { display: true, text: 'Fitness' }
+                            title: { display: true, text: 'Fitness', color: fontColor },
+                            ticks: { color: fontColor }, grid: { color: gridColor }
                         },
                         x: {
-                            title: { display: true, text: 'Generation' }
+                            title: { display: true, text: 'Generation', color: fontColor },
+                            ticks: { color: fontColor }, grid: { color: gridColor }
                         }
                     }
                 }
@@ -339,7 +437,7 @@
             const selector = document.getElementById('population-selector');
             selector.innerHTML = '';
             population.forEach((_, index) => {
-                selector.innerHTML += `<option value="${index}">Solución ${index + 1}</option>`;
+                selector.innerHTML += `<option value="${index}">S ${index + 1}</option>`;
             });
             selector.onchange = () => displaySelectedPopulationMember(selector.value, rowHints, colHints);
         }
@@ -362,6 +460,7 @@
                 input.type = 'file';
                 input.accept = '.csv';
                 
+                
                 input.onchange = async (event) => {
                     const file = event.target.files[0];
                     const formData = new FormData();
@@ -372,6 +471,7 @@
                         body: formData
                     });
                     
+                    document.getElementById('loading-overlay').style.display = 'flex';
                     if (response.ok) {
                         const data = await response.json(); 
                         gridState = data.grid; 
@@ -380,11 +480,13 @@
                     } else {
                         console.error("Error loading file:", response.statusText);
                     }
+                    document.getElementById('loading-overlay').style.display = 'none';
                 };
                 
                 input.click();
             } catch (error) {
                 console.error("Error from Flask server:", error);
+                document.getElementById('loading-overlay').style.display = 'none';
             }
         }
         generateGrid();
