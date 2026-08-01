@@ -16,7 +16,8 @@ class GeneticAlgorithmSolver(NonogramSolverPort):
         population_size = 100
         mutation_rate = 0.05
         crossover_rate = 0.9
-        num_generations = 100000
+        num_generations = 5000
+        #100000
 
         fitness_convergence =[]
 
@@ -49,22 +50,30 @@ class GeneticAlgorithmSolver(NonogramSolverPort):
                 new_population.extend([child_a, child_b])
 
             #Taguchi offspring
-            new_population = self.taguchi_offpring(new_population, col_hints, orthogonal_array)
+            new_population.append( self.taguchi_offpring(new_population, col_hints, orthogonal_array) )
 
+            #mutation
             for m in range(len(new_population) - 1):
                 if np.random.rand() < mutation_rate: 
                     new_population[m] = self.mutation( new_population[m], cols, row_hints)
 
-            population = new_population
-            fitness_scores = [self.fitness_function(grid , col_hints) for grid in population]
+            #selecting population  
+            seen_individuals = {tuple(map(tuple, ind)) for ind in population} 
+            for individual in new_population:
+                individual_tuple = tuple(map(tuple, individual))
+                if individual_tuple not in seen_individuals:
+                    population.append(individual)
+                    seen_individuals.add(individual_tuple)
 
-            fitness_convergence.append( min(fitness_scores) )
-            if fitness_convergence[-1] > fitness_convergence[-2]:
-                population[fitness_scores.index(max(fitness_scores))] = best
-                fitness_scores = [self.fitness_function(grid , col_hints) for grid in population]
+            fitness_scores = np.array([self.fitness_function(grid , col_hints) for grid in population])
 
-            best = population[fitness_scores.index(min(fitness_scores))]
-            mutation_rate += 0.000001
+            sorted_index = np.argsort(fitness_scores)[:population_size]
+            population = [population[i] for i in sorted_index]
+            fitness_scores = fitness_scores[sorted_index]
+
+            fitness_convergence.append( (fitness_scores[0]) )
+            best = population[0]
+
             if fitness_convergence[-1] == 0: 
                 return (generation+1), fitness_convergence, population, best
             
@@ -150,7 +159,7 @@ class GeneticAlgorithmSolver(NonogramSolverPort):
         number_of_condensed = len(hints)
         zeros = cols - sum(hints)
 
-        posiciones_base = rng.choice(zeros + 1, size=number_of_condensed, replace=False)
+        posiciones_base = rng.choice(zeros , size=number_of_condensed, replace=False)
         
         posiciones_base.sort()
         
@@ -193,14 +202,10 @@ class GeneticAlgorithmSolver(NonogramSolverPort):
     def mutation(self, chromosome, cols, row_hints):
         rng = np.random.default_rng()
         mutated_line = rng.integers(0, len(chromosome))
-        for _ in range(cols):
-            if row_hints[mutated_line]==[0] :
-                mutated_line = rng.integers(0, len(chromosome))
-            else:
-                break
-        new_row = self.generate_random_row(cols, row_hints[mutated_line], rng)         
+        if row_hints[mutated_line]==[0] :
+            return chromosome
+        new_row = self.generate_random_row(cols, row_hints[mutated_line], rng)   
         chromosome[mutated_line] = self.decode_line(new_row, cols, row_hints[mutated_line])
-
         return chromosome
 
     def hadamard(self, order):    
@@ -227,9 +232,7 @@ class GeneticAlgorithmSolver(NonogramSolverPort):
     def taguchi_offpring(self, population, col_hints, orthogonal_array):
         rng = np.random.default_rng()
         u1, u2 = rng.integers(0, len(population), 2)
-        population[u1], population[u2] = self.orthogonal_cross(population[u1], population[u2], col_hints, orthogonal_array)
-
-        return population
+        return self.orthogonal_cross(population[u1], population[u2], col_hints, orthogonal_array)
 
 
     def orthogonal_cross(self, u1, u2, col_hints, orthogonal_array): 
@@ -244,5 +247,5 @@ class GeneticAlgorithmSolver(NonogramSolverPort):
         mean0 = (scores[:, None] * mask0).sum(axis=0) / mask0.sum(axis=0)
         mean1 = (scores[:, None] * mask1).sum(axis=0) / mask1.sum(axis=0)
 
-        return np.where(mean0 > mean1, u1, u2), np.where(mean0 > mean1, u1, u2)
+        return np.where(mean0 > mean1, u1, u2)
             
